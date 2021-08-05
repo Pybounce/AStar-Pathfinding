@@ -8,6 +8,7 @@ public class EnemySpawnController : MonoBehaviour
     [SerializeField] private Transform[] spawners;
     private float currentSpawnTime = 0f;
     [SerializeField] private float spawnRate = 1f;
+    [SerializeField] GameObject enemy;
 
     // Start is called before the first frame update
     void Start()
@@ -33,6 +34,8 @@ public class EnemySpawnController : MonoBehaviour
 
     private void SpawnEnemy()
     {
-
+        int spawnerIndex = Random.Range(0, spawners.Length - 1);
+        Instantiate(enemy);
+        enemy.transform.position = spawners[spawnerIndex].position;
     }
 }

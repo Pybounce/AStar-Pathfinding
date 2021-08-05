@@ -4,18 +4,12 @@ using UnityEngine;
 
 public class Pathfinding : MonoBehaviour
 {
+    /*
     AStarGrid grid;
-    Transform playerTransform;
 
     private void Start()
     {
         grid = GameObject.FindGameObjectWithTag("ScriptsObject").GetComponent<AStarGrid>();
-        playerTransform = GameObject.FindGameObjectWithTag("Player").transform;
-    }
-
-    private void Update()
-    {
-        FindPath(transform.position, playerTransform.position);
     }
 
     void FindPath(Vector3 startPos, Vector3 targetPos)
@@ -44,7 +38,7 @@ public class Pathfinding : MonoBehaviour
             openNodes.Remove(currentNode);
             closedNodes.Add(currentNode);
 
-            if (currentNode == targetNode)
+            if (currentNode.Equals(targetNode))
             {
                 //Path found
                 RetracePath(startNode, targetNode);
@@ -93,5 +87,5 @@ public class Pathfinding : MonoBehaviour
         }
         path.Reverse();
     }
-
+    */
 }

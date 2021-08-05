@@ -1,26 +1,28 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Collections;
 using UnityEngine;
 
 public class AStarGrid : MonoBehaviour
 {
-    public LayerMask unwalkableLayer;
-    public Vector2 gridWorldSize;
-    public float nodeRadius;
-    float nodeDiameter => nodeRadius * 2;
-    AStarNode[,] grid;
-
-    Vector2Int gridNodeSize;
+    [SerializeField] private LayerMask unwalkableLayer;
+    [SerializeField] private Vector2 gridWorldSize;
+    [SerializeField] private float nodeRadius;
+    private float nodeDiameter => nodeRadius * 2;
+    [HideInInspector] public Vector2Int gridNodeSize;
+    private AStarNode[,] grid;
+    [HideInInspector] public AStarNode[] flatGrid;
 
     private void Start()
     {
-        GetGridNodeSize();
+        CalculateGridNodeSize();
         CreateGrid();
     }
 
-    private void GetGridNodeSize()
+
+    private void CalculateGridNodeSize()
     {
-        
+
         gridNodeSize.x = Mathf.RoundToInt(gridWorldSize.x / nodeDiameter);
         gridNodeSize.y = Mathf.RoundToInt(gridWorldSize.y / nodeDiameter);
     }
@@ -35,23 +37,23 @@ public class AStarGrid : MonoBehaviour
             {
                 Vector3 nodePosition = worldBottomLeft + Vector3.right * (x * nodeDiameter + nodeRadius) + Vector3.forward * (y * nodeDiameter + nodeRadius);
                 bool walkable = !Physics.CheckSphere(nodePosition, nodeRadius, unwalkableLayer);
-                grid[x, y] = new AStarNode(walkable, nodePosition);
+                grid[x, y] = new AStarNode(walkable, nodePosition, IndexTo1D(new Vector2Int(x, y), gridNodeSize.x));
             }
         }
+        flatGrid = GridTo1D();
     }
 
-    private void OnDrawGizmos()
+    private AStarNode[] GridTo1D()
     {
-        Gizmos.DrawWireCube(transform.position, new Vector3(gridWorldSize.x, 1, gridWorldSize.y));
-        if (grid != null)
+        AStarNode[] newGrid = new AStarNode[gridNodeSize.x * gridNodeSize.y];
+        for (int x = 0; x < gridNodeSize.x; x++)
         {
-            foreach (AStarNode n in grid)
+            for (int y = 0; y < gridNodeSize.y; y++)
             {
-                
-                Gizmos.color = n.walkable ? Color.white : Color.red;
-                Gizmos.DrawCube(n.position, Vector3.one * (nodeDiameter / 2f));
+                newGrid[IndexTo1D(new Vector2Int(x, y), gridNodeSize.x)] = grid[x, y];
             }
         }
+        return newGrid;
     }
 
     public Vector2Int WorldToGridPoint(Vector3 worldPos, bool clamp = true)
@@ -66,39 +68,34 @@ public class AStarGrid : MonoBehaviour
             gridPos.x = Mathf.Clamp(gridPos.x, 0, gridNodeSize.x - 1);
             gridPos.y = Mathf.Clamp(gridPos.y, 0, gridNodeSize.y - 1);
         }
-      
+
         return gridPos;
     }
 
-    public AStarNode GetNodeAtPoint(Vector3 p)
+
+    //Note to self - Create Extension method to house methods like this.
+    private int IndexTo1D(Vector2Int _2DIndex, int _arrayWidth)
     {
-        Vector2Int nodePoint = WorldToGridPoint(p);
-        return grid[nodePoint.x, nodePoint.y];
-    }
-    public AStarNode GetNodeAtPoint(Vector2Int p)
-    {
-        return grid[p.x, p.y];
+        return _2DIndex.x + (_2DIndex.y * _arrayWidth);
     }
 
 
-    public List<AStarNode> GetNeighbours(AStarNode node)
+
+    //Debugging-----------------------------------------------------------------------------------------------------------
+    /*
+    private void OnDrawGizmos()
     {
-        List<AStarNode> neighbours = new List<AStarNode>();
-        Vector2Int nodeGridPoint = WorldToGridPoint(node.position);
-        for (int x = -1; x <= 1; x++)
+        Gizmos.DrawWireCube(transform.position, new Vector3(gridWorldSize.x, 1, gridWorldSize.y));
+        if (grid != null)
         {
-            for (int y = -1; y <= 1; y++)
+            foreach (AStarNode n in grid)
             {
-                if (x == 0 && y == 0) { continue; } //Node that was passed in
-                Vector2Int currentNodeGridPos = new Vector2Int(nodeGridPoint.x + x, nodeGridPoint.y + y);
-                if (currentNodeGridPos.x >= 0 && currentNodeGridPos.x < gridNodeSize.x && currentNodeGridPos.y >= 0 && currentNodeGridPos.y < gridNodeSize.y)
-                {
-                    neighbours.Add(GetNodeAtPoint(currentNodeGridPos));
-                }
+
+                Gizmos.color = n.walkable ? Color.white : Color.red;
+                Gizmos.DrawCube(n.position, Vector3.one * (nodeDiameter / 2f));
             }
         }
-        return neighbours;
     }
-
+    */
 
 }
