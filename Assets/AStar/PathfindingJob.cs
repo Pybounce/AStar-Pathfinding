@@ -1,9 +1,9 @@
-using System.Collections;
-using System.Collections.Generic;
+using System;
 using Unity.Collections;
 using Unity.Jobs;
 using UnityEngine;
 
+//Doesn't yet use burst compile
 public struct PathfindingJob : IJob
 {
     public NativeArray<AStarNode> grid;
@@ -12,41 +12,34 @@ public struct PathfindingJob : IJob
     public int startIndex;
     public int targetIndex;
 
-    public NativeArray<Vector3> pathPositions; //The final output of the job, it's the positions of each point in the path
+    public NativeList<Vector3> pathPositions; //The final output of the job, it's the positions of each point in the path
 
     public void Execute()
     {
-        pathPositions = FindPath(startIndex, targetIndex);
+        FindPath(startIndex, targetIndex);
+
+        
     }
 
     ///<summary> yeet </summary>
-    NativeArray<Vector3> FindPath(int startIndex, int targetIndex)
+    void FindPath(int _startIndex, int _targetIndex)
     {
 
-        NativeList<int> openNodes = new NativeList<int>(0, Allocator.Temp);  //This references the grid 1D index of a node in grid
+        BinaryHeap<NodeIndexCost> openNodes = new BinaryHeap<NodeIndexCost>(gridWidth * gridHeight, Allocator.Temp);
         NativeList<int> closedNodes = new NativeList<int>(0, Allocator.Temp);
 
-        openNodes.Add(startIndex);
+        if (grid[_targetIndex].walkable == false) { _targetIndex = GetCloestWalkable(_targetIndex); }
 
-        AStarNode targetNode = grid[targetIndex];
-        AStarNode startNode = grid[startIndex];
+        openNodes.PushElement(new NodeIndexCost(_startIndex, grid[_startIndex].fCost));
+
+        AStarNode targetNode = grid[_targetIndex];
         
-        while (openNodes.Length > 0)
+        while (openNodes.currentHeapCount > 0)
         {
-            AStarNode currentNode = grid[openNodes[0]];
-            //Find lowest f-cost node in openNodes [VERY SLOW]
-            int currentNodeOpenIndex = 0;   //The index of the currentNode inside of openNodes
-            for (int i = 1; i < openNodes.Length; i++)
-            {
-                AStarNode currentOpenNode = grid[openNodes[i]];
-                if (currentOpenNode.fCost < currentNode.fCost || (currentOpenNode.fCost == currentNode.fCost && currentOpenNode.hCost < currentNode.hCost))
-                {
-                    currentNode = currentOpenNode;
-                    currentNodeOpenIndex = i;
-                }
-            }
+            AStarNode currentNode = grid[openNodes.PeekElement().index];
+            
 
-            openNodes.RemoveAt(currentNodeOpenIndex);
+            openNodes.PopElement();
             closedNodes.Add(currentNode.gridIndex);
 
             if (currentNode.gridIndex == targetNode.gridIndex)
@@ -54,36 +47,61 @@ public struct PathfindingJob : IJob
                 //Path found
                 openNodes.Dispose();
                 closedNodes.Dispose();
-                return GetNodePositions(RetracePath(startNode, targetNode));
+                GetNodePositions(RetracePath(grid[_startIndex], grid[_targetIndex]));
+                return;
             }
 
-            foreach (AStarNode neighbour in GetNeighbours(currentNode))
+            NativeList<AStarNode> neighbours = GetNeighbours(currentNode);
+            for (int i = 0; i < neighbours.Length; i++)
             {
+                AStarNode neighbour = neighbours[i];
                 if (neighbour.walkable == false || closedNodes.Contains(neighbour.gridIndex)) { continue; }
 
                 int neighbourGCost = currentNode.gCost + GetNodeDistance(currentNode, neighbour);
-                if (neighbourGCost < neighbour.gCost || !openNodes.Contains(neighbour.gridIndex))
+                NodeIndexCost neighbourNodeIndexCost = new NodeIndexCost(neighbour.gridIndex, neighbour.fCost);
+                //openNodes.heapElements.con
+                
+                if (neighbourGCost < neighbour.gCost || !openNodes.heapElements.Contains(neighbourNodeIndexCost))
                 {
                     AStarNode updatedNeighbour = grid[neighbour.gridIndex];
                     updatedNeighbour.gCost = neighbourGCost;
                     updatedNeighbour.hCost = GetNodeDistance(neighbour, targetNode);
                     updatedNeighbour.parent = currentNode.gridIndex;
                     grid[neighbour.gridIndex] = updatedNeighbour;
-                    if (!openNodes.Contains(updatedNeighbour.gridIndex)) { openNodes.Add(updatedNeighbour.gridIndex); }
+                    if (!openNodes.heapElements.Contains(neighbourNodeIndexCost)) { openNodes.PushElement(new NodeIndexCost(updatedNeighbour.gridIndex,updatedNeighbour.fCost)); }
                 }
             }
+           
 
         }
         openNodes.Dispose();
         closedNodes.Dispose();
-        return pathPositions;  //This should never be called
         
     }
 
+    private int GetCloestWalkable(int _unwalkableIndex)
+    {
+        for (int x = -1; x <= 1; x++)
+        {
+            for (int y = -1; y <= 1; y++)
+            {
+                if (x == 0 && y == 0) { continue; } //Node that was passed in
+                Vector2Int index2D = IndexTo2D(_unwalkableIndex, gridWidth);
+                index2D.x += x;
+                index2D.y += y;
+                int currentIndex = IndexTo1D(index2D, gridWidth);
+                if (grid[currentIndex].walkable)
+                {
+                    return currentIndex;
+                }
+            }
+        }
+        return _unwalkableIndex;
+    }
 
     public NativeList<AStarNode> GetNeighbours(AStarNode node)
     {
-        NativeList<AStarNode> neighbours = new NativeList<AStarNode>();
+        NativeList<AStarNode> neighbours = new NativeList<AStarNode>(0, Allocator.Temp);
         Vector2Int gridIndex = IndexTo2D(node.gridIndex, gridWidth);
 
         for (int x = -1; x <= 1; x++)
@@ -128,20 +146,19 @@ public struct PathfindingJob : IJob
 
     NativeList<AStarNode> RetracePath(AStarNode startNode, AStarNode endNode)
     {
-        NativeList<AStarNode> path = new NativeList<AStarNode>();
+        NativeList<AStarNode> path = new NativeList<AStarNode>(0, Allocator.Temp);
         AStarNode currentNode = endNode;
-        path.Add(currentNode);
         while (currentNode.gridIndex != startNode.gridIndex)
         {
-            currentNode = grid[currentNode.parent];
             path.Add(currentNode);
+            currentNode = grid[currentNode.parent];
         }
         return ReverseNativeList(path);
     }
 
     NativeList<T> ReverseNativeList<T>(NativeList<T> _list) where T:struct
     {
-        NativeList<T> reversedList = new NativeList<T>();
+        NativeList<T> reversedList = new NativeList<T>(0, Allocator.Temp);
         for (int i = 0; i < _list.Length; i++)
         {
             reversedList.Add(_list[_list.Length - 1 - i]);
@@ -149,14 +166,38 @@ public struct PathfindingJob : IJob
         return reversedList;
     }
 
-    NativeArray<Vector3> GetNodePositions(NativeList<AStarNode> _NodeList)
+    void GetNodePositions(NativeList<AStarNode> _NodeList)
     {
-        NativeArray<Vector3> nodePositions = new NativeArray<Vector3>(_NodeList.Length, Allocator.Temp);
         for (int i = 0; i < _NodeList.Length; i++)
         {
-            nodePositions[i] = _NodeList[i].position;
+            pathPositions.Add(_NodeList[i].position);
         }
-        return nodePositions;
     }
 
+
+
+    
+
+
+}
+public struct NodeIndexCost : IComparable<NodeIndexCost>, IEquatable<NodeIndexCost>
+{
+    //This struct contains the node index, and whatever cost you want to sort by in the BinaryHeap
+    public int index;
+    public int value;
+    public NodeIndexCost(int _index, int _value)
+    {
+        this.index = _index;
+        this.value = _value;
+    }
+    public int CompareTo(NodeIndexCost obj)
+    {
+        return value.CompareTo(obj.value);
+    }
+
+    public bool Equals(NodeIndexCost other)
+    {
+        if (index == other.index) { return true; }
+        return false;
+    }
 }

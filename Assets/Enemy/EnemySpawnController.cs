@@ -6,16 +6,12 @@ public class EnemySpawnController : MonoBehaviour
 {
 
     [SerializeField] private Transform[] spawners;
-    private float currentSpawnTime = 0f;
-    [SerializeField] private float spawnRate = 1f;
+    private float currentSpawnTime = 100f;
+    [SerializeField] private float spawnRate = 100f;
     [SerializeField] GameObject enemy;
-
-    // Start is called before the first frame update
-    void Start()
-    {
-
-    }
-
+    [SerializeField] private int maxAliveCount = 25;
+    private int currentEnemyCount = 0;
+  
     // Update is called once per frame
     void Update()
     {
@@ -25,16 +21,17 @@ public class EnemySpawnController : MonoBehaviour
     private void IncrementSpawnTime()
     {
         currentSpawnTime += Time.deltaTime;
-        if (currentSpawnTime >= spawnRate)
+        if (currentSpawnTime >= spawnRate && currentEnemyCount < maxAliveCount)
         {
             currentSpawnTime = 0f;
+            currentEnemyCount += 1;
             SpawnEnemy();
         }
     }
 
     private void SpawnEnemy()
     {
-        int spawnerIndex = Random.Range(0, spawners.Length - 1);
+        int spawnerIndex = Random.Range(0, spawners.Length);
         Instantiate(enemy);
         enemy.transform.position = spawners[spawnerIndex].position;
     }

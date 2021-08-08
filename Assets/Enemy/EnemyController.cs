@@ -9,28 +9,37 @@ public class EnemyController : MonoBehaviour
     AStarGrid gridController;
     EnemyMovement enemyMovement;
     private Transform playerTransform;
+    [SerializeField] private LayerMask obstacleLayer;
 
-    private bool isCalculatingPath = false; //Makes sure not to start another job until the current one is finished.
     [SerializeField] private float pathUpdateFrequency = 1f;
     private float lastPathUpdate = 0f;
 
-    private void Awake()
+
+    private void Start()
     {
         gridController = GameObject.FindGameObjectWithTag("ScriptObject").GetComponent<AStarGrid>();
-        enemyMovement = GetComponent<EnemyMovement>();
+        enemyMovement = this.GetComponent<EnemyMovement>();
         playerTransform = GameObject.FindGameObjectWithTag("Player").transform;
     }
 
     private void Update()
     {
         lastPathUpdate += Time.deltaTime;
-        if (lastPathUpdate >= pathUpdateFrequency && isCalculatingPath == false)
+        if (IsPlayerPathClear())
         {
+            enemyMovement.followPlayer = true;
+            lastPathUpdate = pathUpdateFrequency;   //Ensures that when they no longer follow the player, it updates the path immediately
+        }
+        else if (lastPathUpdate >= pathUpdateFrequency)
+        {
+
+            enemyMovement.followPlayer = false;
             lastPathUpdate = 0f;
-            isCalculatingPath = true;
             GetNewPath();
+
         }
     }
+    
 
     private void GetNewPath()
     {
@@ -49,21 +58,35 @@ public class EnemyController : MonoBehaviour
         JobHandle handle = jobData.Schedule();
         handle.Complete();
 
-        Vector3[] newPath = new Vector3[result.Length];
+        enemyMovement.ClearPath();
         for (int i = 0; i < result.Length; i++)
         {
-            newPath[i] = result[i];
+            enemyMovement.AddPathPoint(result[i]);
         }
-        enemyMovement.SetPath(newPath);
 
         result.Dispose();
         grid.Dispose();
-        isCalculatingPath = false;
-
     }
 
 
+    private bool IsPlayerPathClear()
+    {
+        float playerDistance = Vector3.Distance(transform.position, playerTransform.position);
+        float maxFollowDistance = 2.5f;   //Only checks if the path is clear when within this distance
+        if (playerDistance < maxFollowDistance)
+        {
+            Vector3 direction = (playerTransform.position - transform.position).normalized;
+            // Does the ray intersect any objects excluding the player layer
+            if (!Physics.Raycast(transform.position, direction, out RaycastHit hit, playerDistance, obstacleLayer))
+            {
+                //Obstacles in way
+                return true;
+            }
+        }
+        
 
+        return false;
+    }
 
 
     //Note to self - Create Extension method to house methods like this.

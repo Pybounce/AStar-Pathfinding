@@ -17,6 +17,8 @@ public class AStarGrid : MonoBehaviour
     {
         CalculateGridNodeSize();
         CreateGrid();
+        WeightBoarderNodes();
+        flatGrid = GridTo1D();
     }
 
 
@@ -40,9 +42,53 @@ public class AStarGrid : MonoBehaviour
                 grid[x, y] = new AStarNode(walkable, nodePosition, IndexTo1D(new Vector2Int(x, y), gridNodeSize.x));
             }
         }
-        flatGrid = GridTo1D();
     }
+    /// <summary>
+    /// Gives nodes that are next to unwalkable nodes, a higher weight, so agents don't use them unless needed when pathing.
+    /// </summary>
+    private void WeightBoarderNodes()
+    {
+        for (int x = 0; x < gridNodeSize.x; x++)
+        {
+            for (int y = 0; y < gridNodeSize.y; y++)
+            {
+                AStarNode currentNode = grid[x, y];
+                if (currentNode.walkable == false)
+                {
+                    List<AStarNode> neighbours = GetNeighbours(new Vector2Int(x, y));
+                    for (int i = 0; i <neighbours.Count; i++)
+                    {
+                        AStarNode currentNeighbour = neighbours[i];
+                        if (currentNeighbour.walkable == true)
+                        {
+                            Vector2Int neighbour2DIndex = IndexTo2D(currentNeighbour.gridIndex, gridNodeSize.x);
+                            AStarNode newNode = grid[neighbour2DIndex.x, neighbour2DIndex.y];
+                            newNode.weightCost = 500000;
+                            grid[neighbour2DIndex.x, neighbour2DIndex.y] = newNode;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    private List<AStarNode> GetNeighbours(Vector2Int nodeIndex)
+    {
+        List<AStarNode> neighbours = new List<AStarNode>();
 
+        for (int x = -1; x <= 1; x++)
+        {
+            for (int y = -1; y <= 1; y++)
+            {
+                if (x == 0 && y == 0) { continue; } //Node that was passed in
+                Vector2Int currentNodeGridIndex = new Vector2Int(nodeIndex.x + x, nodeIndex.y + y);
+                if (currentNodeGridIndex.x >= 0 && currentNodeGridIndex.x < gridNodeSize.x && currentNodeGridIndex.y >= 0 && currentNodeGridIndex.y < gridNodeSize.y)
+                {
+                    neighbours.Add(grid[currentNodeGridIndex.x, currentNodeGridIndex.y]);
+                }
+            }
+        }
+        return neighbours;
+    }
     private AStarNode[] GridTo1D()
     {
         AStarNode[] newGrid = new AStarNode[gridNodeSize.x * gridNodeSize.y];
@@ -78,11 +124,16 @@ public class AStarGrid : MonoBehaviour
     {
         return _2DIndex.x + (_2DIndex.y * _arrayWidth);
     }
-
+    private Vector2Int IndexTo2D(int _1DIndex, int _arrayWidth)
+    {
+        int x = _1DIndex % _arrayWidth;
+        int y = _1DIndex / _arrayWidth;
+        return new Vector2Int(x, y);
+    }
 
 
     //Debugging-----------------------------------------------------------------------------------------------------------
-    /*
+
     private void OnDrawGizmos()
     {
         Gizmos.DrawWireCube(transform.position, new Vector3(gridWorldSize.x, 1, gridWorldSize.y));
@@ -92,10 +143,14 @@ public class AStarGrid : MonoBehaviour
             {
 
                 Gizmos.color = n.walkable ? Color.white : Color.red;
+                if (n.weightCost > 1)
+                {
+                    Gizmos.color = Color.yellow;
+                }
                 Gizmos.DrawCube(n.position, Vector3.one * (nodeDiameter / 2f));
             }
         }
     }
-    */
+    
 
 }
