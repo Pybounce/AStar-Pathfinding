@@ -48,8 +48,8 @@ public class EnemyController : MonoBehaviour
         PathfindingJob jobData = new PathfindingJob();
         jobData.gridWidth = gridController.gridNodeSize.x;
         jobData.gridHeight = gridController.gridNodeSize.y;
-        jobData.startIndex = IndexTo1D(gridController.WorldToGridPoint(transform.position), gridController.gridNodeSize.x);
-        jobData.targetIndex = IndexTo1D(gridController.WorldToGridPoint(playerTransform.position), gridController.gridNodeSize.x);
+        jobData.startIndex = PybUtility.IndexTo1D(gridController.WorldToGridPoint(transform.position), gridController.gridNodeSize.x);
+        jobData.targetIndex = PybUtility.IndexTo1D(gridController.WorldToGridPoint(playerTransform.position), gridController.gridNodeSize.x);
         NativeArray<AStarNode> grid = new NativeArray<AStarNode>(gridController.flatGrid.Length, Allocator.TempJob);
         jobData.grid = grid;
         jobData.grid.CopyFrom(gridController.flatGrid);
@@ -83,16 +83,7 @@ public class EnemyController : MonoBehaviour
                 return true;
             }
         }
-        
-
         return false;
-    }
-
-
-    //Note to self - Create Extension method to house methods like this.
-    private int IndexTo1D(Vector2Int _2DIndex, int _arrayWidth)
-    {
-        return _2DIndex.x + (_2DIndex.y * _arrayWidth);
     }
 
 }

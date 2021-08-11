@@ -39,7 +39,7 @@ public class AStarGrid : MonoBehaviour
             {
                 Vector3 nodePosition = worldBottomLeft + Vector3.right * (x * nodeDiameter + nodeRadius) + Vector3.forward * (y * nodeDiameter + nodeRadius);
                 bool walkable = !Physics.CheckSphere(nodePosition, nodeRadius, unwalkableLayer);
-                grid[x, y] = new AStarNode(walkable, nodePosition, IndexTo1D(new Vector2Int(x, y), gridNodeSize.x));
+                grid[x, y] = new AStarNode(walkable, nodePosition, PybUtility.IndexTo1D(new Vector2Int(x, y), gridNodeSize.x));
             }
         }
     }
@@ -61,9 +61,9 @@ public class AStarGrid : MonoBehaviour
                         AStarNode currentNeighbour = neighbours[i];
                         if (currentNeighbour.walkable == true)
                         {
-                            Vector2Int neighbour2DIndex = IndexTo2D(currentNeighbour.gridIndex, gridNodeSize.x);
+                            Vector2Int neighbour2DIndex = PybUtility.IndexTo2D(currentNeighbour.gridIndex, gridNodeSize.x);
                             AStarNode newNode = grid[neighbour2DIndex.x, neighbour2DIndex.y];
-                            newNode.weightCost = 500000;
+                            newNode.weightCost = 1;
                             grid[neighbour2DIndex.x, neighbour2DIndex.y] = newNode;
                         }
                     }
@@ -96,7 +96,7 @@ public class AStarGrid : MonoBehaviour
         {
             for (int y = 0; y < gridNodeSize.y; y++)
             {
-                newGrid[IndexTo1D(new Vector2Int(x, y), gridNodeSize.x)] = grid[x, y];
+                newGrid[PybUtility.IndexTo1D(new Vector2Int(x, y), gridNodeSize.x)] = grid[x, y];
             }
         }
         return newGrid;
@@ -116,19 +116,6 @@ public class AStarGrid : MonoBehaviour
         }
 
         return gridPos;
-    }
-
-
-    //Note to self - Create Extension method to house methods like this.
-    private int IndexTo1D(Vector2Int _2DIndex, int _arrayWidth)
-    {
-        return _2DIndex.x + (_2DIndex.y * _arrayWidth);
-    }
-    private Vector2Int IndexTo2D(int _1DIndex, int _arrayWidth)
-    {
-        int x = _1DIndex % _arrayWidth;
-        int y = _1DIndex / _arrayWidth;
-        return new Vector2Int(x, y);
     }
 
 

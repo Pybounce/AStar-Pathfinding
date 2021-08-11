@@ -86,10 +86,10 @@ public struct PathfindingJob : IJob
             for (int y = -1; y <= 1; y++)
             {
                 if (x == 0 && y == 0) { continue; } //Node that was passed in
-                Vector2Int index2D = IndexTo2D(_unwalkableIndex, gridWidth);
+                Vector2Int index2D = PybUtility.IndexTo2D(_unwalkableIndex, gridWidth);
                 index2D.x += x;
                 index2D.y += y;
-                int currentIndex = IndexTo1D(index2D, gridWidth);
+                int currentIndex = PybUtility.IndexTo1D(index2D, gridWidth);
                 if (grid[currentIndex].walkable)
                 {
                     return currentIndex;
@@ -102,7 +102,7 @@ public struct PathfindingJob : IJob
     public NativeList<AStarNode> GetNeighbours(AStarNode node)
     {
         NativeList<AStarNode> neighbours = new NativeList<AStarNode>(0, Allocator.Temp);
-        Vector2Int gridIndex = IndexTo2D(node.gridIndex, gridWidth);
+        Vector2Int gridIndex = PybUtility.IndexTo2D(node.gridIndex, gridWidth);
 
         for (int x = -1; x <= 1; x++)
         {
@@ -112,30 +112,17 @@ public struct PathfindingJob : IJob
                 Vector2Int currentNodeGridIndex = new Vector2Int(gridIndex.x + x, gridIndex.y + y);
                 if (currentNodeGridIndex.x >= 0 && currentNodeGridIndex.x < gridWidth && currentNodeGridIndex.y >= 0 && currentNodeGridIndex.y < gridHeight)
                 {
-                    neighbours.Add(grid[IndexTo1D(currentNodeGridIndex, gridWidth)]);
+                    neighbours.Add(grid[PybUtility.IndexTo1D(currentNodeGridIndex, gridWidth)]);
                 }
             }
         }
         return neighbours;
     }
 
-
-
-    public Vector2Int IndexTo2D(int _1DIndex, int _arrayWidth)
-    {
-        int x = _1DIndex % _arrayWidth;
-        int y = _1DIndex / _arrayWidth;
-        return new Vector2Int(x, y);
-    }
-    public int IndexTo1D(Vector2Int _2DIndex, int _arrayWidth)
-    {
-        return _2DIndex.x + (_2DIndex.y * _arrayWidth);
-    }
-
     int GetNodeDistance(AStarNode startNode, AStarNode endNode)
     {
-        Vector2Int startGridPoint = IndexTo2D(startNode.gridIndex, gridWidth);
-        Vector2Int endGridPoint = IndexTo2D(endNode.gridIndex, gridWidth);
+        Vector2Int startGridPoint = PybUtility.IndexTo2D(startNode.gridIndex, gridWidth);
+        Vector2Int endGridPoint = PybUtility.IndexTo2D(endNode.gridIndex, gridWidth);
         int xDelta = Mathf.Abs(startGridPoint.x - endGridPoint.x);
         int yDelta = Mathf.Abs(startGridPoint.y - endGridPoint.y);
 
@@ -173,12 +160,6 @@ public struct PathfindingJob : IJob
             pathPositions.Add(_NodeList[i].position);
         }
     }
-
-
-
-    
-
-
 }
 public struct NodeIndexCost : IComparable<NodeIndexCost>, IEquatable<NodeIndexCost>
 {

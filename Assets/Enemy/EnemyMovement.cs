@@ -42,9 +42,7 @@ public class EnemyMovement : MonoBehaviour
         path.Add(_position);
         currentPathIndex = 0;
     }
-    
-
-
+   
     private void MoveEnemy()
     {
         
